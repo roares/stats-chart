@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>ECharts</title>
+    <script src="https://cdn.staticfile.org/echarts/5.1.0/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.8/dist/vue.js"></script>
+    <script src='https://fastly.jsdelivr.net/npm/echarts-simple-transform/dist/ecSimpleTransform.min.js'></script>
+    <style>
+        #Scatter{
+            width: 90vw;
+            height:90vh;
+        }
+        #Line{
+            position: absolute;
+            top:20px;
+            left: 40px;
+            background-color: white;
+            border-radius: 3px;
+            box-shadow: 0 0 10px;
+            transition: all .2s;
+            padding: 0;
+            
+        }
+        #Boxplot{
+            width: 90vw;
+            height: 80vh;
+        }
+        #Dynamicbar{
+            width: 90vw;
+            height: 80vh;
+        }
+        .sub-show{
+            width: 60vw;
+            height:50vh;
+            overflow: hidden;
+        }
+        .sub-hide{
+            width: 0;
+            height:0;
+        }
+        .sub-hide *{
+            display: none;
+        }
+    </style>
+  </head>
+  <body>
+    <div id="main">
+        <!-- 主图表：气泡图 -->
+        <div id="Scatter" ></div>
+        <!-- 副图表：折线-柱状图 -->
+        <div id="Line" :class="subShow?'sub-show':'sub-hide'"></div>
+        <!-- 主图表： 箱线图 -->
+        <div id="Boxplot"></div>
+        <div id="Dynamicbar"></div>
+    </div>
+    
+    <script type="text/javascript">
+        function getTotal(raw_list){
+            let list =[]
+            let  a = 0
+            raw_list.forEach(el => {
+                a = a + el
+                list.push(a)
+            })
+            return list
+        }
+        var app = new Vue({
+            el: '#main',
+            data: {
+                myScatter:null,
+                myLine:null,
+                myBoxplot:null,
+                myDynamicbar:null,
+                committee_data:{},
+                subShow:false,
+            },
+            watch: {
+                subShow: function (val) {
+                    if(val){
+                        setTimeout(()=>{
+                            this.myLine.resize()
+                        },200)
+                    }
+                }
+            },
+            created(){
+                const request = new XMLHttpRequest();
+                request.open("get",'committer.json');
+                request.send(null);
+                request.onload = () => {
+                    if(request.status == 200) {
+                        this.committee_data = JSON.parse(JSON.parse(request.responseText));
+                        this.drawScatter()
+                        this.drawBoxplot() 
+                        this.drawDynamicbar()
+                    }
+                }
+            },
+            methods:{
+                drawScatter(){
+                    // 基于准备好的dom，初始化echarts实例
+                    this.myScatter = echarts.init(document.getElementById('Scatter'));
+                    const years = this.committee_data['scatter']['xAxis']
+                    const committees = this.committee_data['scatter']['yAxis']
+                    const data = this.committee_data['scatter']['size'].map(function (item) {
+                        return [item[1], item[0], item[2]];
+                    });
+                    const option = {
+                        title: {
+                            text: 'committee - 2021',
+                            left:40,
+                            top:20
+                        },
+                        legend: {
+                            data: years,
+                            left: 'right'
+                        },
+                        dataset: {
+                            source: this.committee_data['dataset']
+                        },
+                        tooltip: {
+                            position: 'top',
+                            axisPointer: {
+                                type: 'cross'
+                            },
+                            formatter: function (params, ticket, callback) {
+                                const size = params.data[2]
+                                const xAxis = years[params.data[0]]
+                                const yAxis = committees[params.data[1]]
+                                return `${xAxis} <br/> ${yAxis}: ${size}`;
+                            }
+                        },
+                        grid: {
+                            left: 40,
+                            top:60,
+                            bottom: 10,
+                            right: 30,
+                            containLabel: true
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: years,
+                            boundaryGap: false,
+                            splitLine: {
+                                show: true
+                            },
+                            axisLine: {
+                                show: false
+                            }
+                        },
+                        yAxis: {
+                            type: 'category',
+                            data: committees,
+                            minInterval: 0,
+                            axisLine: {
+                                show: false
+                            }
+                        },
+                        series: [{
+                            name: 'PMC',
+                            type: 'scatter',
+                            symbolSize: function (val) {
+                                return val[2]/2;
+                            },
+                            data: data,
+                            animationDelay: function (idx) {
+                                return idx * 5;
+                            }
+                        }]
+                    };
+                    this.myScatter.setOption(option);
+                    // 绑定点击事件
+                    this.myScatter.on('click', (params) => {
+                        this.drawLine(committees[params.value[1]])
+                    });
+                    window.onresize = () => {
+                        this.myScatter.resize()
+                    }
+                },
+                drawLine(committee){
+                    this.subShow = true
+                    console.log(this.committee_data);
+
+                    const data = this.committee_data['committee_detail'][committee]
+                    const lineValue = getTotal(data.values)
+                    const established = data['established'].split('/')[1] + '-'+(data['established'].split('/')[0] - 0)
+                    this.myLine = echarts.init(document.getElementById('Line'));
+                    const option = {
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'cross'
+                            }
+                        },
+                        title: {
+                            text: committee,
+                            subtext: data['description'],
+                            top:20,
+                            left: 'center'
+                        },
+                        grid: {
+                            top:100,
+                            right: '10%'
+                        },
+                        legend: {
+                            top:60,
+                            right:30,
+                            data: ['new', 'total']
+                        },
+                        toolbox: {
+                            top:10,
+                            right:20,
+                            feature: {
+                                myClose: {
+                                    show: true,
+                                    title: 'close',
+                                    icon: 'path://M704.28672 309.20704l28.95872 28.9792L334.6432 736.78848l-28.95872-28.9792z M341.03296 315.5968l398.60224 398.60224-28.95872 28.95872-398.60224-398.60224z',
+                                    onclick: () => {
+                                        this.subShow = false
+                                    }
+                                }
+                            }
+                        },
+                        xAxis: [
+                            {
+                                type: 'category',
+                                data:data['xAxis']
+                            }
+                        ],
+                        yAxis: [{
+                            type: 'value',
+                            name: 'scale',
+                            position: 'left',
+                            alignTicks: true,
+                            axisLine: {
+                                show: true
+                            },
+                            axisLabel: {
+                                formatter: '{value}'
+                            }
+                        }],
+                        series: [
+                        {
+                            name: 'new',
+                            type: 'bar',
+                            data: data.values
+                        },
+                        {
+                            name: 'total',
+                            type: 'line',
+                            data: lineValue
+                        },
+                        {
+                            data: [[data['xAxis'].indexOf(established),lineValue[data['xAxis'].indexOf(established)]]],
+                            type: 'scatter',
+                            symbol: 'path://M512 85.9l110.8 318.7 337.2 6.8-268.8 203.8 97.7 322.9L512 745.4 235.1 938.1l97.7-322.9L64 411.4l337.2-6.8z',
+                            symbolSize: 20,
+                            tooltip: {
+                                show:false
+                            },
+                            label: {
+                                show: true,
+                                formatter: function (param) {
+                                    return 'established';
+                                },
+                                position: [40,20],
+                                minMargin: 2
+                            }
+                        }]
+                    };
+                    this.myLine.setOption(option);
+                    window.onresize = () => {
+                        this.myLine.resize()
+                    }
+                },
+                drawBoxplot() {
+                    echarts.registerTransform(ecSimpleTransform.aggregate);
+                    const _rawData =this.committee_data['boxplot']
+                    this.myBoxplot = echarts.init(document.getElementById('Boxplot'));
+                    const option = {
+                        dataset: [
+                        {
+                            id: 'raw',
+                            source: _rawData
+                        },
+                        {
+                            id: 'size_aggregate',
+                            fromDatasetId: 'raw',
+                            transform: [
+                            {
+                                type: 'ecSimpleTransform:aggregate',
+                                config: {
+                                    resultDimensions: [
+                                        { name: 'min', from: 'total', method: 'min' },
+                                        { name: 'Q1', from: 'total', method: 'Q1' },
+                                        { name: 'median', from: 'total', method: 'median' },
+                                        { name: 'Q3', from: 'total', method: 'Q3' },
+                                        { name: 'max', from: 'total', method: 'max' },
+                                        { name: 'year', from: 'year' }
+                                    ],
+                                    groupBy: 'year'
+                                }
+                            },
+                            {
+                                type: 'sort',
+                                config: {
+                                    dimension: 'year',
+                                    order: 'desc'
+                                }
+                            }]
+                        }
+                        ],
+                        title: {
+                            text: "Distribution of the number of the PMC members"
+                        },
+                        tooltip: {
+                            trigger: 'axis',
+                            confine: true
+                        },
+                        xAxis: {
+                            name: 'Size',
+                            nameLocation: 'middle',
+                            nameGap: 30,
+                            scale: true
+                        },
+                        yAxis: {
+                            type: 'category'
+                        },
+                        grid: {
+                            bottom: 100
+                        },
+                        legend: {
+                            selected: { detail: false }
+                        },
+                        series: [
+                        {
+                            name: 'boxplot',
+                            type: 'boxplot',
+                            datasetId: 'size_aggregate',
+                            itemStyle: {
+                                color: '#b8c5f2'
+                            },
+                            encode: {
+                                x: ['min', 'Q1', 'median', 'Q3', 'max'],
+                                y: 'year',
+                                itemName: ['year'],
+                                tooltip: ['min', 'Q1', 'median', 'Q3', 'max']
+                            }
+                        },
+                        {
+                            name: 'detail',
+                            type: 'scatter',
+                            datasetId: 'raw',
+                            symbolSize: 6,
+                            tooltip: {
+                                trigger: 'item'
+                            },
+                            label: {
+                                show: true,
+                                position: 'top',
+                                align: 'left',
+                                verticalAlign: 'middle',
+                                rotate: 90,
+                                fontSize: 12
+                            },
+                            itemStyle: {
+                                color: '#d00000'
+                            },
+                            encode: {
+                                x: 'total',
+                                y: 'year',
+                                label: 'committee',
+                                itemName: 'Committee',
+                                tooltip: ['year', 'committee', 'size']
+                            }
+                        }]
+                    };
+                    this.myBoxplot.setOption(option);
+                },
+                drawDynamicbar() {
+                    this.myDynamicbar = echarts.init(document.getElementById('Dynamicbar'));
+                    const updateFrequency = 5000;
+                    const dimension = 0;
+                    const data = this.committee_data['bar'];
+                    const years = Object.keys(data);
+                    const startYear = years[0]
+                    const lastYear = 2022
+                    const yAxisMax = 20
+                    let year = years[0]
+                    
+
+                    const option = {
+                        grid: {
+                            top: 10,
+                            bottom: 30,
+                            left: 150,
+                            right: 80
+                        },
+                        xAxis: {
+                            axisLabel: {
+                                formatter: function (n) {
+                                    return Math.round(n) + '';
+                                }
+                            },
+                        },
+                        yAxis: {
+                            type: 'category',
+                            inverse: true,
+                            data:data[year].yAxis,
+                            animationDuration: 300,
+                            animationDurationUpdate: 300
+                        },
+                        series: [{
+                            realtimeSort: true,
+                            seriesLayoutBy: 'column',
+                            type: 'bar',
+                            encode: {
+                                x: 3,
+                                y: 2
+                            },
+                            label: {
+                                show: true,
+                                precision: 1,
+                                position: 'right',
+                                valueAnimation: true,
+                                fontFamily: 'monospace',
+                                formatter: function (n) {
+                                    return Math.round(n.value);
+                                }
+                            },
+                            data:data[year].value
+                        }],
+                        animationDuration: 0,
+                        animationDurationUpdate: updateFrequency,
+                        animationEasing: 'linear',
+                        animationEasingUpdate: 'linear',
+                        graphic: {
+                            elements: [{
+                                type: 'text',
+                                right: 160,
+                                bottom: 60,
+                                style: {
+                                    text: year,
+                                    font: 'bolder 80px monospace',
+                                    fill: 'rgba(100, 100, 100, 0.25)'
+                                },
+                                z: 100
+                            }]
+                        }
+                    };
+                    let that = this
+                    function run() {
+                        option.yAxis.data = data[year].yAxis
+                        option.yAxis.max = data[year].yAxis.length > yAxisMax? yAxisMax:data[year].yAxis.length
+                        option.series[0].data = data[year].value;
+                        option.graphic.elements[0].style.text = year;
+                        if(year == startYear){
+                            that.myDynamicbar.clear()
+                            that.myDynamicbar = echarts.init(document.getElementById('Dynamicbar'));
+                        }
+                        that.myDynamicbar.setOption(option);
+                        year = year == lastYear ? startYear :(year - 0 )+ 1 
+                    }
+                    setTimeout(() => {
+                        run();
+                    }, 0);
+
+                    setInterval(() => {
+                        run();
+                    }, 3000);
+                },
+
+            }
+        })
+    </script>
+  </body>
+</html>
