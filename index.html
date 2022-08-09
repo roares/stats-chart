@@ -7,9 +7,47 @@
     <script src="https://cdn.jsdelivr.net/npm/vue@2.7.8/dist/vue.js"></script>
     <script src='https://fastly.jsdelivr.net/npm/echarts-simple-transform/dist/ecSimpleTransform.min.js'></script>
     <style>
+       *{
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+        #main{
+            overflow: hidden;
+        }
+        .right-nav{
+            position:absolute;
+            padding: 20px 0;
+            height:100vh;
+            left:0;
+            border-right: 1px solid #d6d6d6;
+
+        }
+        .right-nav li{
+            position: relative;
+            min-width: 150px;
+            padding: 10px 10px;
+            width: 100%;
+            cursor: pointer;
+
+        }
+        .right-nav li:hover, .nav-selected{
+            background-color: #5470c6;
+            color: white;
+        }
+        .chart-box{
+            position: relative;
+            width: calc(100% - 150px);
+            left:150px;
+            height: 100vh;
+            transition: .2s all;
+        }
         #Scatter{
+            position: relative;
+            flex:1;
             width: 90vw;
-            height:90vh;
+            height:100vh;
         }
         #Line{
             position: absolute;
@@ -23,12 +61,22 @@
             
         }
         #Boxplot{
-            width: 90vw;
-            height: 80vh;
+            position: relative;
+            flex:1;
+            width: 100%;
+            height: 100vh;
         }
         #Dynamicbar{
+            position: relative;
+            flex:1;
+            width: 100%;
+            height: 100vh;
+        }
+        #chart-4{
+            position: relative;
+            flex:1;
             width: 90vw;
-            height: 80vh;
+            height: 100vh;
         }
         .sub-show{
             width: 60vw;
@@ -46,16 +94,26 @@
   </head>
   <body>
     <div id="main">
-        <!-- 主图表：气泡图 -->
-        <div id="Scatter" ></div>
-        <!-- 副图表：折线-柱状图 -->
-        <div id="Line" :class="subShow?'sub-show':'sub-hide'"></div>
-        <!-- 主图表： 箱线图 -->
-        <div id="Boxplot"></div>
-        <div id="Dynamicbar"></div>
+        <nav class="right-nav">
+            <ul>
+                <li v-for="(item, index) in chartList" :class="navIndex == index?'nav-selected':''" @click="select(index)">
+                {{'chart - ' + index}}
+                </li>
+            </ul>
+        </nav>
+        <div class="chart-box" ref="chart" >
+            <!-- 主图表：气泡图 -->
+            <div id="Scatter" ></div>
+            <!-- 副图表：折线-柱状图 -->
+            <div id="Line" :class="subShow?'sub-show':'sub-hide'"></div>
+            <!-- 主图表： 箱线图 -->
+            <div id="Boxplot"></div>
+            <div id="Dynamicbar"></div>
+        </div>
     </div>
     
     <script type="text/javascript">
+        
         function getTotal(raw_list){
             let list =[]
             let  a = 0
@@ -68,12 +126,14 @@
         var app = new Vue({
             el: '#main',
             data: {
+                navIndex:0,
                 myScatter:null,
                 myLine:null,
                 myBoxplot:null,
                 myDynamicbar:null,
                 committee_data:{},
                 subShow:false,
+                chartList:[this.myScatter,this.myBoxplot,this.myDynamicbar]
             },
             watch: {
                 subShow: function (val) {
@@ -81,6 +141,22 @@
                         setTimeout(()=>{
                             this.myLine.resize()
                         },200)
+                    }
+                },
+                navIndex:function(n, o){
+                    this.$refs.chart.style.top = - (100) * n +'vh'
+                    switch(n){
+                        case 0:
+                            if(!this.myScatter){this.drawScatter()}
+                            if(this.myDynamicbar){this.myDynamicbar.clear()}
+                            break;
+                        case 1:
+                            if(!this.myBoxplot){this.drawBoxplot()}
+                            if(this.myDynamicbar){this.myDynamicbar.clear()}
+                            break;
+                        case 2:
+                            this.drawDynamicbar()
+                            break;
                     }
                 }
             },
@@ -90,17 +166,20 @@
                 request.send(null);
                 request.onload = () => {
                     if(request.status == 200) {
-                        this.committee_data = JSON.parse(JSON.parse(request.responseText));
+                        this.committee_data = JSON.parse(request.responseText);
                         this.drawScatter()
-                        this.drawBoxplot() 
-                        this.drawDynamicbar()
                     }
                 }
             },
             methods:{
+                select(index){
+                    this.navIndex = index
+                },
                 drawScatter(){
                     // 基于准备好的dom，初始化echarts实例
                     this.myScatter = echarts.init(document.getElementById('Scatter'));
+                    console.log(this.myScatter);
+
                     const years = this.committee_data['scatter']['xAxis']
                     const committees = this.committee_data['scatter']['yAxis']
                     const data = this.committee_data['scatter']['size'].map(function (item) {
@@ -113,7 +192,6 @@
                             top:20
                         },
                         legend: {
-                            data: years,
                             left: 'right'
                         },
                         dataset: {
@@ -180,8 +258,6 @@
                 },
                 drawLine(committee){
                     this.subShow = true
-                    console.log(this.committee_data);
-
                     const data = this.committee_data['committee_detail'][committee]
                     const lineValue = getTotal(data.values)
                     const established = data['established'].split('/')[1] + '-'+(data['established'].split('/')[0] - 0)
