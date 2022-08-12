@@ -7,11 +7,16 @@ function dynamicbar(dom, data){
     const yAxisMax = 20
     let year = years[0]
     const option = {
+        title:{
+            left:40,
+            top:20,
+        },
         grid: {
-            top: 10,
-            bottom: 30,
-            left: 150,
-            right: 80
+            left: 40,
+            top:'10%',
+            bottom: '5%',
+            right: '5%',
+            containLabel: true
         },
         xAxis: {
             axisLabel: {

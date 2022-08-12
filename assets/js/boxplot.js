@@ -34,7 +34,9 @@ function boxplot(dom, _rawData){
         }
         ],
         title: {
-            text: "Distribution of the number of the PMC members"
+            text: "Distribution of the number of the PMC members",
+            left:40,
+            top:20,
         },
         tooltip: {
             trigger: 'axis',
@@ -50,7 +52,11 @@ function boxplot(dom, _rawData){
             type: 'category'
         },
         grid: {
-            bottom: 100
+            left: 40,
+            top:'10%',
+            bottom: '5%',
+            right: '10%',
+            containLabel: true
         },
         legend: {
             selected: { detail: false }

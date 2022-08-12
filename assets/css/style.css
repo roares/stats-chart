@@ -6,9 +6,10 @@
 }
 #main{
     overflow: hidden;
+    display: flex;
 }
 .right-nav{
-    position:absolute;
+    position:relative;
     padding: 20px 0;
     height:100vh;
     left:0;
@@ -17,7 +18,7 @@
 }
 .right-nav li{
     position: relative;
-    min-width: 150px;
+    min-width: 250px;
     padding: 10px 10px;
     width: 100%;
     cursor: pointer;
@@ -29,8 +30,9 @@
 }
 .chart-box{
     position: relative;
-    width: calc(100% - 150px);
-    left:150px;
+    flex:1;
+    max-width: calc(100% - 250px);
+    /* left:150px; */
     height: 100vh;
     transition: .2s all;
 }

@@ -20,7 +20,7 @@ function scatter(dom,data){
     })
     const option = {
         title: {
-            text: 'committee - 2021',
+            text: 'Trends in the growth of committees',
             left:40,
             top:20,
         },
@@ -42,7 +42,7 @@ function scatter(dom,data){
             left: 40,
             top:'10%',
             bottom: '5%',
-            right: 30,
+            right: '10%',
             containLabel: true
         },
         xAxis: {

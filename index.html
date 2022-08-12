@@ -13,7 +13,7 @@
         <nav class="right-nav">
             <ul>
                 <li v-for="(item, index) in chartList" :class="navIndex == index?'nav-selected':''" @click="select(index)">
-                {{'chart - ' + index}}
+                {{item.title}}
                 </li>
             </ul>
         </nav>
@@ -48,7 +48,7 @@
                 myBar:null,
                 committee_data:{},
                 subShow:false,
-                chartList:['myScatter','myBoxplot','myDynamicbar','myBar']
+                chartList:[{id:'myScatter',title:'Trends in the growth of the PMC members'},{id:'myBoxplot',title:'Distribution of the number of the PMC members'},{id:'myDynamicbar',title:'Dynamicbar'},{id:'myBar',title:'Trends in podlings status'}]
             },
             watch: {
                 subShow: function (val) {
@@ -60,7 +60,7 @@
                 },
                 navIndex:function(n, o){
                     this.$refs.chart.style.top = - (100) * n +'vh'
-                    this[this.chartList[n]].run()
+                    this[this.chartList[n].id].run()
                     if(n == 2){
                         this.barTimer = setInterval(() => {
                             this.myDynamicbar.run();

@@ -7,20 +7,22 @@ function bar(dom, data){
     const status = data['status']
     const option = {
         title: {
-            text: 'podlings - status'
+            text: 'Trends in podlings status',
+            left:40,
+            top:20,
         },
         legend: {
         },
         grid:{
             top:'10%',
-            left:'10%',
-            right:'15%',
+            left: 80,
+            right:'19%',
             bottom:'10%'
 
         },
         tooltip:{
             trigger: 'item',
-            position:['86%','10%'],
+            position:['83%','10%'],
             formatter:(params)=>{
                 const year = params.name
                 const title = params.seriesName
@@ -89,6 +91,6 @@ function bar(dom, data){
     window.onresize = () => {
         myChart.resize()
     }
-    
+
     return myChart
 }
