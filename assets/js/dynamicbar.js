@@ -8,6 +8,7 @@ function dynamicbar(dom, data){
     let year = years[0]
     const option = {
         title:{
+            text:'Dynamic sorting at committee scale',
             left:40,
             top:20,
         },
